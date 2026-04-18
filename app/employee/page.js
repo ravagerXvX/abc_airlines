@@ -602,7 +602,7 @@ function EmployeesSection({ toast }) {
       </div>
       <DataTable columns={columns} data={data} actions={(row) => (
         <>
-          <button className="btn btn-sm btn-secondary" onClick={() => viewFlights(row)} title="View Flights"><Plane size={16}/></button>
+          <button className="btn btn-sm btn-secondary" onClick={() => viewFlights(row)} title="View Flights"><Plane size={16} /></button>
           <button className="btn btn-sm btn-secondary" onClick={() => openEdit(row)}>Edit</button>
           <button className="btn btn-sm btn-danger" onClick={() => setConfirm(row)}>Delete</button>
         </>
@@ -707,7 +707,7 @@ function BookingsSection() {
 
   useEffect(() => {
     (async () => {
-      try { setData(await api('/api/bookings')); } catch {}
+      try { setData(await api('/api/bookings')); } catch { }
       setLoading(false);
     })();
   }, []);
@@ -746,7 +746,7 @@ function ScheduleSection() {
 
   useEffect(() => {
     (async () => {
-      try { setData(await api('/api/schedule')); } catch {}
+      try { setData(await api('/api/schedule')); } catch { }
       setLoading(false);
     })();
   }, []);
