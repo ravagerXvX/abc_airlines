@@ -41,6 +41,58 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ---
 
+## Capabilities & Official Functionality Walkthrough
+
+The platform is strategically divided into two secure, distinct experiences: the **Passenger Portal** for customers to discover and book flights, and the **Employee Dashboard** for airline staff to administer the entire operation.
+
+### 🌟 1. Passenger Experience (User Portal) `/passenger`
+
+The passenger side of the platform allows users to rapidly find and manage their travel.
+
+* **Flight Discovery & Booking**: Passengers can browse active flights, view departure and arrival times, and immediately assign a flight to their account.
+<p align="center">
+  <img src="./docs/screenshots/passenger_booking.png" width="700" style="border-radius: 8px; border: 1px solid #333;" alt="Passenger Booking View" />
+</p>
+
+* **Managing Reservations ("My Bookings")**: Functional view listing upcoming flights dynamically, giving the user immediate power to cancel reservations.
+<p align="center">
+  <img src="./docs/screenshots/passenger_my_bookings.png" width="700" style="border-radius: 8px; border: 1px solid #333;" alt="Manage Bookings View" />
+</p>
+
+* **Secure Profile Management**: Lets passengers quickly revise their personal data via intuitive forms.
+<p align="center">
+  <img src="./docs/screenshots/passenger_profile.png" width="700" style="border-radius: 8px; border: 1px solid #333;" alt="Passenger Profile View" />
+</p>
+
+
+### 🛠️ 2. Employee Operations (Admin Dashboard) `/employee`
+
+The administrative hub empowers airline employees with unfettered, structured access to manage the core infrastructure.
+
+* **Dashboard & Quick Analytics**: Main overview linking to all necessary database actions.
+<p align="center">
+  <img src="./docs/screenshots/employee_home.png" width="700" style="border-radius: 8px; border: 1px solid #333;" alt="Employee Home Dashboard" />
+</p>
+
+* **Flights Management**: Staff can review routes, correct timings, block flights, and assign fleet variables.
+<p align="center">
+  <img src="./docs/screenshots/employee_flights.png" width="700" style="border-radius: 8px; border: 1px solid #333;" alt="Flights Management View" />
+</p>
+
+* **Fleet & Aircraft Allocation**: Database capturing plane models, capacities, and identifying plates.
+<p align="center">
+  <img src="./docs/screenshots/employee_planes.png" width="700" style="border-radius: 8px; border: 1px solid #333;" alt="Employee Planes View" />
+</p>
+
+* **System-Wide Bookings & Audits**: Complete unfiltered view of all bookings linking specific passenger profiles to active flight IDs.
+<p align="center">
+  <img src="./docs/screenshots/employee_bookings.png" width="700" style="border-radius: 8px; border: 1px solid #333;" alt="Audit / System-wide Bookings" />
+</p>
+
+* **Visual Walkthrough**: `[View End-to-end Session Video](./docs/screenshots/full_walkthrough.webp)`
+
+---
+
 ## Project Structure
 
 ```
@@ -87,30 +139,6 @@ abc_airlines_nextjs/
 ├── .env.local.example             # <- copy to .env.local and fill password
 └── package.json
 ```
-
----
-
-## Features
-
-### Employee Panel (`/employee`)
-| Page | What you can do |
-|------|----------------|
-| Airports | Add / Edit / Delete airports with multivalued contacts |
-| Flights | Add / Edit / Delete flights, view full details with crew and dates |
-| Planes | Full fleet CRUD |
-| Employees | Add / Edit / Delete staff with designations and contacts |
-| Passengers | View all registered passengers |
-| Bookings | View all reservations across all flights |
-| Schedule | Full 7-day advance flight schedule |
-
-### Passenger Portal (`/passenger`)
-- Login with existing Passenger ID
-- Register as a new passenger
-- Browse all available flights
-- View full flight details (crew, scheduled dates)
-- Book a flight (duplicate booking prevented)
-- Cancel a booking
-- Edit own profile
 
 ---
 
