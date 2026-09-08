@@ -39,7 +39,6 @@ Then add the following to `.env.local` (see `.env.local.example`):
 ```
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
-GOOGLE_CALLBACK_URL=http://localhost:3000/api/auth/google/callback
 AUTH_SESSION_SECRET=a_unique_random_value_at_least_32_characters_long
 ```
 
@@ -50,7 +49,14 @@ EMPLOYEE_USERNAME=admin
 EMPLOYEE_PASSWORD=change_this_staff_password
 ```
 
-For a deployed app, set `GOOGLE_CALLBACK_URL` and the authorized Google redirect URI to that deployment's exact HTTPS URL.
+The app derives the callback URL from the current request host. Add both of these authorized redirect URIs in Google Cloud Console:
+
+```
+http://localhost:3000/api/auth/google/callback
+https://your-production-domain.vercel.app/api/auth/google/callback
+```
+
+For Vercel preview deployments, add each preview domain too, or test OAuth from the production domain.
 
 ### 3. Make sure your database is ready
 Run the SQL script from earlier (`abc_airlines_with_data.sql`) in pgAdmin or psql:

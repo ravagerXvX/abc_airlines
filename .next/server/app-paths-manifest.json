@@ -1,7 +1,8 @@
 {
-  "/page": "app/page.js",
   "/api/auth/session/route": "app/api/auth/session/route.js",
-  "/api/flights/route": "app/api/flights/route.js",
-  "/api/auth/logout/route": "app/api/auth/logout/route.js",
-  "/passenger/page": "app/passenger/page.js"
+  "/employee/page": "app/employee/page.js",
+  "/page": "app/page.js",
+  "/passenger/page": "app/passenger/page.js",
+  "/api/airports/route": "app/api/airports/route.js",
+  "/api/auth/employee/login/route": "app/api/auth/employee/login/route.js"
 }
