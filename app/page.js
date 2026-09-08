@@ -17,7 +17,7 @@ export default function Home() {
         <Link href="/employee" className="role-card">
           <div className="role-icon employee"><Shield size={24} /></div>
           <h2>Employee</h2>
-          <p>Full access — manage airports, flights, planes, employees, passengers and bookings.</p>
+          <p>Sign in with staff credentials — manage airports, flights, planes, employees, passengers and bookings.</p>
           <div className="cta">Enter Employee Panel <span>→</span></div>
         </Link>
 

@@ -1,7 +1,7 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, XCircle, Luggage, Plane, Ticket, ClipboardList, User, LogOut, Home, PlaneTakeoff, Armchair, Calendar, Clock, Save } from 'lucide-react';
+import { CheckCircle2, XCircle, Luggage, Plane, Ticket, ClipboardList, User, LogOut, Home, PlaneTakeoff, Armchair, Calendar, Clock } from 'lucide-react';
 
 const api = async (url, opts = {}) => {
   const res = await fetch(url, {
@@ -42,13 +42,47 @@ function Loading() {
 // ══════════════════════════════════════════════
 export default function PassengerPage() {
   const [passenger, setPassenger] = useState(null);
+  const [checkingSession, setCheckingSession] = useState(true);
   const [toast, setToast] = useState(null);
   const showToast = (msg, type = 'success') => setToast({ msg, type });
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const response = await fetch('/api/auth/session');
+        if (!response.ok) return;
+        const data = await response.json();
+        if (active && data.role === 'passenger') setPassenger(data.passenger);
+      } catch {
+        // A missing or expired session simply shows the Google sign-in screen.
+      } finally {
+        if (active) setCheckingSession(false);
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+
+  if (checkingSession) return <Loading />;
 
   if (!passenger) {
     return (
       <>
-        <LoginRegister onLogin={setPassenger} toast={showToast} />
+        <PassengerSignInChoice onLogin={setPassenger} toast={showToast} />
+        {toast && <Toast {...toast} onClose={() => setToast(null)} />}
+      </>
+    );
+  }
+
+  if (passenger.needs_profile) {
+    return (
+      <>
+        <CompleteProfile
+          passenger={passenger}
+          onComplete={setPassenger}
+          toast={showToast}
+          onLogout={() => setPassenger(null)}
+        />
         {toast && <Toast {...toast} onClose={() => setToast(null)} />}
       </>
     );
@@ -56,101 +90,126 @@ export default function PassengerPage() {
 
   return (
     <>
-      <PassengerDashboard passenger={passenger} onLogout={() => setPassenger(null)} toast={showToast} />
+      <PassengerDashboard passenger={passenger} onPassengerChange={setPassenger} onLogout={() => setPassenger(null)} toast={showToast} />
       {toast && <Toast {...toast} onClose={() => setToast(null)} />}
     </>
   );
 }
 
-// ─────────────────────────────────────────
-// LOGIN / REGISTER
-// ─────────────────────────────────────────
-function LoginRegister({ onLogin, toast }) {
-  const [tab, setTab] = useState('login');
-  const [loginId, setLoginId] = useState('');
-  const [regForm, setRegForm] = useState({ p_id: '', name: '', address: '', contact_no: '' });
-  const [loading, setLoading] = useState(false);
-
-  const handleLogin = async () => {
-    if (!loginId.trim()) return toast('Please enter your Passenger ID', 'error');
-    setLoading(true);
-    try {
-      const p = await api(`/api/passengers/${loginId}`);
-      onLogin(p);
-    } catch (e) { toast(e.message, 'error'); }
-    setLoading(false);
-  };
-
-  const handleRegister = async () => {
-    if (!regForm.p_id || !regForm.name) return toast('ID and Name are required', 'error');
-    setLoading(true);
-    try {
-      await api('/api/passengers', { method: 'POST', body: regForm });
-      const p = await api(`/api/passengers/${regForm.p_id}`);
-      toast(`Welcome, ${regForm.name}! Your ID is ${regForm.p_id}`);
-      onLogin(p);
-    } catch (e) { toast(e.message, 'error'); }
-    setLoading(false);
-  };
-
+function PassengerSignInChoice({ onLogin, toast }) {
   return (
     <div className="login-container animate-in">
       <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem', color: 'var(--color-primary)' }}><Luggage size={48} /></div>
         <h1 className="page-title">Passenger Portal</h1>
-        <p className="page-subtitle">Log in or register to manage your flights</p>
-      </div>
-
-      <div className="login-tabs">
-        <button className={`login-tab ${tab === 'login' ? 'active' : ''}`} onClick={() => setTab('login')}>Log In</button>
-        <button className={`login-tab ${tab === 'register' ? 'active' : ''}`} onClick={() => setTab('register')}>Register</button>
+        <p className="page-subtitle">Sign in with Google to access your flights</p>
       </div>
 
       <div className="card">
-        {tab === 'login' ? (
-          <>
-            <div className="form-group">
-              <label className="form-label">Passenger ID</label>
-              <input
-                className="form-input"
-                value={loginId}
-                onChange={e => setLoginId(e.target.value)}
-                placeholder="Enter your passenger ID"
-                onKeyDown={e => e.key === 'Enter' && handleLogin()}
-              />
-            </div>
-            <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={handleLogin} disabled={loading}>
-              {loading ? 'Logging in...' : 'Log In →'}
-            </button>
-          </>
-        ) : (
-          <>
-            <div className="form-group">
-              <label className="form-label">Choose a Passenger ID</label>
-              <input className="form-input" value={regForm.p_id} onChange={e => setRegForm({ ...regForm, p_id: e.target.value })} placeholder="e.g. 101" />
-              <div className="form-hint">Pick a unique numeric ID — remember it!</div>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Your Name</label>
-              <input className="form-input" value={regForm.name} onChange={e => setRegForm({ ...regForm, name: e.target.value })} placeholder="Full name" />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Address</label>
-              <input className="form-input" value={regForm.address} onChange={e => setRegForm({ ...regForm, address: e.target.value })} placeholder="Your address" />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Contact Number</label>
-              <input className="form-input" value={regForm.contact_no} onChange={e => setRegForm({ ...regForm, contact_no: e.target.value })} placeholder="Optional" />
-            </div>
-            <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={handleRegister} disabled={loading}>
-              {loading ? 'Registering...' : 'Create Account →'}
-            </button>
-          </>
-        )}
+        <p style={{ color: 'var(--text-muted)', lineHeight: 1.6, marginTop: 0 }}>
+          Continue with Google to access your passenger account and manage bookings securely.
+        </p>
+
+        <a className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: '1rem' }} href="/api/auth/google">
+          <span style={{ fontWeight: 800, fontSize: '1.05rem' }}>G</span> Continue with Google
+        </a>
       </div>
 
       <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-        <Link href="/" className="nav-link" style={{ color: 'var(--text-muted)' }}>← Back to Home</Link>
+        <Link href="/" className="nav-link" style={{ color: 'var(--text-muted)' }}>Back to Home</Link>
+      </div>
+    </div>
+  );
+}
+
+function GoogleSignIn() {
+  return (
+    <div className="login-container animate-in">
+      <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem', color: 'var(--color-primary)' }}><Luggage size={48} /></div>
+        <h1 className="page-title">Passenger Portal</h1>
+        <p className="page-subtitle">Sign in securely to manage your flights</p>
+      </div>
+
+      <div className="card">
+        <p style={{ color: 'var(--text-muted)', lineHeight: 1.6, marginTop: 0 }}>
+          Continue with your Google account. Your passenger ID is generated automatically the first time you sign in and stays the same for future logins.
+        </p>
+        <a className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: '1rem' }} href="/api/auth/google">
+          <span style={{ fontWeight: 800, fontSize: '1.05rem' }}>G</span> Continue with Google
+        </a>
+      </div>
+
+      <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+        <Link href="/" className="nav-link" style={{ color: 'var(--text-muted)' }}>Back to Home</Link>
+      </div>
+    </div>
+  );
+}
+
+function CompleteProfile({ passenger, onComplete, toast, onLogout }) {
+  const [form, setForm] = useState({ address: '', contact_no: '' });
+  const [loading, setLoading] = useState(false);
+
+  const handleSave = async () => {
+    if (!form.address.trim() || !form.contact_no.trim()) {
+      return toast('Address and phone number are required', 'error');
+    }
+    setLoading(true);
+    try {
+      const data = await api(`/api/passengers/${passenger.p_id}`, {
+        method: 'PUT',
+        body: { address: form.address.trim(), contact_no: form.contact_no.trim() },
+      });
+      toast('Your details were saved.');
+      onComplete(data.passenger);
+    } catch (e) { toast(e.message, 'error'); }
+    setLoading(false);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } finally {
+      onLogout();
+    }
+  };
+
+  return (
+    <div className="login-container animate-in">
+      <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem', color: 'var(--color-primary)' }}><User size={48} /></div>
+        <h1 className="page-title">Complete your profile</h1>
+        <p className="page-subtitle">Google signed you in as {passenger.name}. Add the details stored on your passenger record.</p>
+      </div>
+
+      <div className="card">
+        <div className="form-group">
+          <label className="form-label">Address</label>
+          <input
+            className="form-input"
+            value={form.address}
+            onChange={e => setForm({ ...form, address: e.target.value })}
+            placeholder="Home or mailing address"
+          />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Phone number</label>
+          <input
+            className="form-input"
+            value={form.contact_no}
+            onChange={e => setForm({ ...form, contact_no: e.target.value })}
+            placeholder="Contact number"
+            onKeyDown={e => e.key === 'Enter' && handleSave()}
+          />
+        </div>
+        <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={handleSave} disabled={loading}>
+          {loading ? 'Saving...' : 'Save and continue'}
+        </button>
+      </div>
+
+      <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+        <button className="nav-link" style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }} onClick={handleLogout}>Sign out</button>
       </div>
     </div>
   );
@@ -159,8 +218,16 @@ function LoginRegister({ onLogin, toast }) {
 // ─────────────────────────────────────────
 // PASSENGER DASHBOARD
 // ─────────────────────────────────────────
-function PassengerDashboard({ passenger, onLogout, toast }) {
+function PassengerDashboard({ passenger, onPassengerChange, onLogout, toast }) {
   const [section, setSection] = useState('flights');
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } finally {
+      onLogout();
+    }
+  };
 
   const SECTIONS = [
     { key: 'flights', icon: <Plane size={16} />, label: 'Browse Flights' },
@@ -193,7 +260,7 @@ function PassengerDashboard({ passenger, onLogout, toast }) {
           </div>
           <div className="sidebar-section">
             <div className="sidebar-label">Account</div>
-            <button className="sidebar-link" onClick={onLogout}><span className="icon"><LogOut size={16} /></span> Logout</button>
+            <button className="sidebar-link" onClick={handleLogout}><span className="icon"><LogOut size={16} /></span> Logout</button>
             <Link href="/" className="sidebar-link"><span className="icon"><Home size={16} /></span> Home</Link>
           </div>
         </div>
@@ -203,7 +270,7 @@ function PassengerDashboard({ passenger, onLogout, toast }) {
           {section === 'flights' && <BrowseFlights toast={toast} />}
           {section === 'book' && <BookFlight passenger={passenger} toast={toast} />}
           {section === 'bookings' && <MyBookings passenger={passenger} toast={toast} />}
-          {section === 'profile' && <MyProfile passenger={passenger} toast={toast} />}
+          {section === 'profile' && <MyProfile passenger={passenger} onPassengerChange={onPassengerChange} toast={toast} />}
         </div>
       </div>
     </div>
@@ -217,6 +284,9 @@ function BrowseFlights({ toast }) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState(null);
+  const [search, setSearch] = useState('');
+  const [googleReady, setGoogleReady] = useState(false);
+  const searchInputRef = useRef(null);
 
   useEffect(() => {
     (async () => {
@@ -224,6 +294,59 @@ function BrowseFlights({ toast }) {
       setLoading(false);
     })();
   }, [toast]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    if (!key || window.google?.maps?.places) {
+      if (window.google?.maps?.places) setGoogleReady(true);
+      return;
+    }
+
+    const existing = document.getElementById('google-maps-script');
+    if (existing) {
+      const waitForMaps = setInterval(() => {
+        if (window.google?.maps?.places) {
+          setGoogleReady(true);
+          clearInterval(waitForMaps);
+        }
+      }, 200);
+      return () => clearInterval(waitForMaps);
+    }
+
+    const script = document.createElement('script');
+    script.id = 'google-maps-script';
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => setGoogleReady(true);
+    document.head.appendChild(script);
+  }, []);
+
+  useEffect(() => {
+    if (!googleReady || !searchInputRef.current || typeof window === 'undefined' || !window.google?.maps?.places) return;
+
+    const autocomplete = new window.google.maps.places.Autocomplete(searchInputRef.current, {
+      types: ['airport', 'geocode'],
+      fields: ['formatted_address', 'name'],
+    });
+
+    const handlePlace = () => {
+      const place = autocomplete.getPlace();
+      const value = place?.formatted_address || place?.name || '';
+      if (value) setSearch(value);
+    };
+
+    const listener = autocomplete.addListener('place_changed', handlePlace);
+    return () => window.google.maps.event.removeListener(listener);
+  }, [googleReady]);
+
+  const filteredData = data.filter((f) => {
+    if (!search.trim()) return true;
+    const text = `${f.flight_id} ${f.source || ''} ${f.source_city || ''} ${f.destination || ''} ${f.dest_city || ''}`.toLowerCase();
+    return text.includes(search.toLowerCase());
+  });
 
   const viewDetail = async (fid) => {
     try {
@@ -249,12 +372,25 @@ function BrowseFlights({ toast }) {
     <div>
       <div><h1 className="page-title">Available Flights</h1><p className="page-subtitle">Browse all flights and their details</p></div>
 
+      <div className="card" style={{ marginTop: '1.5rem', marginBottom: '1rem' }}>
+        <div className="form-group" style={{ marginBottom: 0 }}>
+          <label className="form-label">Flight or airport search</label>
+          <input
+            ref={searchInputRef}
+            className="form-input"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={googleReady ? 'Search city, airport or flight ID...' : 'Search flight ID, source or destination...'}
+          />
+        </div>
+      </div>
+
       <div style={{ marginTop: '1.5rem' }}>
-        {!data.length ? (
-          <div className="empty-state"><div className="icon"><Plane size={48} /></div><div className="message">No flights available</div></div>
+        {!filteredData.length ? (
+          <div className="empty-state"><div className="icon"><Plane size={48} /></div><div className="message">No flights match your search</div></div>
         ) : (
           <div style={{ display: 'grid', gap: '1rem' }}>
-            {data.map(f => (
+            {filteredData.map(f => (
               <div key={f.flight_id} className="card" style={{ cursor: 'pointer' }} onClick={() => viewDetail(f.flight_id)}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
@@ -338,7 +474,7 @@ function BookFlight({ passenger, toast }) {
     if (!flightId.trim()) return toast('Enter a Flight ID', 'error');
     setLoading(true);
     try {
-      await api('/api/bookings', { method: 'POST', body: { flight_id: flightId, passenger_id: passenger.p_id } });
+      await api('/api/bookings', { method: 'POST', body: { flight_id: flightId } });
       toast(`Flight ${flightId} booked successfully!`);
       setFlightId('');
     } catch (e) { toast(e.message, 'error'); }
@@ -361,7 +497,14 @@ function BookFlight({ passenger, toast }) {
           <div className="form-hint">Browse flights first to find the right ID</div>
         </div>
         <button className="btn btn-primary" onClick={handleBook} disabled={loading}>
-          {loading ? 'Booking...' : '<Ticket size={16} /> Book Flight'}
+          {loading ? (
+            'Booking...'
+          ) : (
+            <>
+              <Ticket size={16} />
+              <span>Book Flight</span>
+            </>
+          )}
         </button>
       </div>
     </div>
@@ -386,7 +529,7 @@ function MyBookings({ passenger, toast }) {
   const cancelBooking = async (fid) => {
     if (!confirm(`Cancel booking on flight ${fid}?`)) return;
     try {
-      await api('/api/bookings', { method: 'DELETE', body: { flight_id: fid, passenger_id: passenger.p_id } });
+      await api('/api/bookings', { method: 'DELETE', body: { flight_id: fid } });
       toast('Booking cancelled.');
       load();
     } catch (e) { toast(e.message, 'error'); }
@@ -448,17 +591,23 @@ function MyBookings({ passenger, toast }) {
 // ─────────────────────────────────────────
 // MY PROFILE
 // ─────────────────────────────────────────
-function MyProfile({ passenger, toast }) {
-  const [form, setForm] = useState({ name: '', address: '', contact_no: '' });
+function MyProfile({ passenger, onPassengerChange, toast }) {
+  const [form, setForm] = useState({
+    name: passenger.name || '',
+    address: passenger.address && passenger.address !== 'Not provided' ? passenger.address : '',
+    contact_no: passenger.contacts || '',
+  });
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
+    if (!form.address.trim() || !form.contact_no.trim()) {
+      return toast('Address and phone number are required', 'error');
+    }
     setSaving(true);
     try {
-      await api(`/api/passengers/${passenger.p_id}`, { method: 'PUT', body: form });
-      if (form.name) passenger.name = form.name;
+      const data = await api(`/api/passengers/${passenger.p_id}`, { method: 'PUT', body: form });
+      if (data.passenger) onPassengerChange(data.passenger);
       toast('Profile updated!');
-      setForm({ name: '', address: '', contact_no: '' });
     } catch (e) { toast(e.message, 'error'); }
     setSaving(false);
   };
@@ -472,23 +621,24 @@ function MyProfile({ passenger, toast }) {
           <div>
             <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>{passenger.name}</div>
             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>ID: {passenger.p_id} · {passenger.address || 'No address'}</div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{passenger.contacts || 'No phone number'}</div>
           </div>
         </div>
 
         <div className="form-group">
-          <label className="form-label">New Name</label>
-          <input className="form-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Leave blank to keep current" />
+          <label className="form-label">Name</label>
+          <input className="form-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Full name" />
         </div>
         <div className="form-group">
-          <label className="form-label">New Address</label>
-          <input className="form-input" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} placeholder="Leave blank to keep current" />
+          <label className="form-label">Address</label>
+          <input className="form-input" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} placeholder="Home or mailing address" />
         </div>
         <div className="form-group">
-          <label className="form-label">Add Contact Number</label>
-          <input className="form-input" value={form.contact_no} onChange={e => setForm({ ...form, contact_no: e.target.value })} placeholder="Optional new contact" />
+          <label className="form-label">Phone number</label>
+          <input className="form-input" value={form.contact_no} onChange={e => setForm({ ...form, contact_no: e.target.value })} placeholder="Contact number" />
         </div>
         <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-          {saving ? 'Saving...' : '<Save size={16} /> Save Changes'}
+          {saving ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
     </div>

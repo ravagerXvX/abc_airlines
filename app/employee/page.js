@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, XCircle, AlertTriangle, Inbox, Building2, Plane, PlaneTakeoff, Users, Luggage, Ticket, CalendarDays, Home } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertTriangle, Inbox, Building2, Plane, PlaneTakeoff, Users, Luggage, Ticket, CalendarDays, Home, LogOut, Shield } from 'lucide-react';
 
 // ── Reusable helpers ──────────────────────────────
 const api = async (url, opts = {}) => {
@@ -78,6 +78,63 @@ function Loading() {
   return <div className="loading-overlay"><div className="spinner" /></div>;
 }
 
+function EmployeeLogin({ onLogin, toast }) {
+  const [form, setForm] = useState({ username: '', password: '' });
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    if (!form.username.trim() || !form.password) return toast('Enter your username and password', 'error');
+    setLoading(true);
+    try {
+      const data = await api('/api/auth/employee/login', { method: 'POST', body: form });
+      onLogin(data.employee);
+    } catch (e) { toast(e.message, 'error'); }
+    setLoading(false);
+  };
+
+  return (
+    <div className="login-container animate-in">
+      <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem', color: 'var(--color-primary)' }}><Shield size={48} /></div>
+        <h1 className="page-title">Employee Panel</h1>
+        <p className="page-subtitle">Sign in with your staff username and password</p>
+      </div>
+
+      <div className="card">
+        <div className="form-group">
+          <label className="form-label">Username</label>
+          <input
+            className="form-input"
+            value={form.username}
+            onChange={e => setForm({ ...form, username: e.target.value })}
+            placeholder="Staff username"
+            autoComplete="username"
+          />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Password</label>
+          <input
+            className="form-input"
+            type="password"
+            value={form.password}
+            onChange={e => setForm({ ...form, password: e.target.value })}
+            placeholder="Password"
+            autoComplete="current-password"
+            onKeyDown={e => e.key === 'Enter' && handleLogin()}
+          />
+        </div>
+        <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={handleLogin} disabled={loading}>
+          {loading ? 'Signing in...' : 'Sign in'}
+        </button>
+      </div>
+
+      <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+        <Link href="/" className="nav-link" style={{ color: 'var(--text-muted)' }}>Back to Home</Link>
+      </div>
+    </div>
+  );
+}
+
 // ══════════════════════════════════════════════
 //  EMPLOYEE PAGE
 // ══════════════════════════════════════════════
@@ -94,13 +151,56 @@ const SECTIONS = [
 export default function EmployeePage() {
   const [section, setSection] = useState('airports');
   const [toast, setToast] = useState(null);
+  const [staff, setStaff] = useState(null);
+  const [checkingSession, setCheckingSession] = useState(true);
   const showToast = (msg, type = 'success') => setToast({ msg, type });
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const response = await fetch('/api/auth/session');
+        if (!response.ok) return;
+        const data = await response.json();
+        if (active && data.role === 'employee') setStaff(data.employee);
+      } catch {
+        // Missing session shows the staff login screen.
+      } finally {
+        if (active) setCheckingSession(false);
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } finally {
+      setStaff(null);
+    }
+  };
+
+  if (checkingSession) return <Loading />;
+
+  if (!staff) {
+    return (
+      <>
+        <EmployeeLogin onLogin={setStaff} toast={showToast} />
+        {toast && <Toast {...toast} onClose={() => setToast(null)} />}
+      </>
+    );
+  }
 
   return (
     <div className="page-container">
       <div className="panel-layout">
         {/* Sidebar */}
         <div className="sidebar">
+          <div style={{ padding: '0 0.75rem', marginBottom: '1.5rem' }}>
+            <div style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)', marginBottom: '0.4rem' }}>Staff session</div>
+            <div style={{ fontWeight: 700, fontSize: '1rem' }}>{staff.display_name}</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{staff.username}</div>
+          </div>
           <div className="sidebar-section">
             <div className="sidebar-label">Management</div>
             {SECTIONS.map(s => (
@@ -115,6 +215,7 @@ export default function EmployeePage() {
           </div>
           <div className="sidebar-section">
             <div className="sidebar-label">Navigation</div>
+            <button className="sidebar-link" onClick={handleLogout}><span className="icon"><LogOut size={16} /></span> Logout</button>
             <Link href="/" className="sidebar-link"><span className="icon"><Home size={16} /></span> Home</Link>
           </div>
         </div>

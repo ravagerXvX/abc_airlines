@@ -1,9 +1,16 @@
 import pool from '@/app/lib/db';
 import { NextResponse } from 'next/server';
+import { getAuthenticatedPassenger } from '@/app/lib/auth';
 
 export async function GET(req, { params }) {
   try {
+    const passenger = await getAuthenticatedPassenger();
+    if (!passenger) return NextResponse.json({ error: 'Sign in with Google to view bookings.' }, { status: 401 });
+
     const { id } = params;
+    if (String(id) !== String(passenger.p_id)) {
+      return NextResponse.json({ error: 'You can only view your own bookings.' }, { status: 403 });
+    }
     const r = await pool.query(`
       SELECT f.flight_id,
              src.name AS from_city, dst.name AS to_city,

@@ -26,6 +26,32 @@ PG_USER=postgres
 PG_PASSWORD=your_actual_password_here
 ```
 
+### 2a. Configure Google sign-in
+
+Create a Google OAuth 2.0 Web Application client and add this authorized redirect URI for local development:
+
+```
+http://localhost:3000/api/auth/google/callback
+```
+
+Then add the following to `.env.local` (see `.env.local.example`):
+
+```
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GOOGLE_CALLBACK_URL=http://localhost:3000/api/auth/google/callback
+AUTH_SESSION_SECRET=a_unique_random_value_at_least_32_characters_long
+```
+
+Staff credentials for `/employee` are stored as a hashed password in Supabase/Postgres. On first run, the app creates that account from:
+
+```
+EMPLOYEE_USERNAME=admin
+EMPLOYEE_PASSWORD=change_this_staff_password
+```
+
+For a deployed app, set `GOOGLE_CALLBACK_URL` and the authorized Google redirect URI to that deployment's exact HTTPS URL.
+
 ### 3. Make sure your database is ready
 Run the SQL script from earlier (`abc_airlines_with_data.sql`) in pgAdmin or psql:
 ```bash
@@ -64,10 +90,12 @@ The passenger side of the platform allows users to rapidly find and manage their
   <img src="./docs/screenshots/passenger_profile.png" width="700" style="border-radius: 8px; border: 1px solid #333;" alt="Passenger Profile View" />
 </p>
 
+* **Google Sign-In**: Passengers sign in with Google through Passport. On a person's first Google sign-in, the app creates a passenger record and an automatically generated numeric passenger ID; later sign-ins reuse that same ID so their bookings remain attached to them. Google does not provide a phone number or mailing address, so the app then asks for those details and stores the address on `passenger` and the phone number on `passenger_contact`.
+
 
 ### 🛠️ 2. Employee Operations (Admin Dashboard) `/employee`
 
-The administrative hub empowers airline employees with unfettered, structured access to manage the core infrastructure.
+The administrative hub is locked behind a staff username and password. After sign-in, employees get unfettered, structured access to manage the core infrastructure.
 
 * **Dashboard & Quick Analytics**: Main overview linking to all necessary database actions.
 <p align="center">

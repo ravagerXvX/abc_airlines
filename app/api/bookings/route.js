@@ -1,8 +1,12 @@
 import pool from '@/app/lib/db';
 import { NextResponse } from 'next/server';
+import { getAuthenticatedEmployee, getAuthenticatedPassenger } from '@/app/lib/auth';
 
 export async function GET() {
   try {
+    const employee = await getAuthenticatedEmployee();
+    if (!employee) return NextResponse.json({ error: 'Sign in as staff to view all bookings.' }, { status: 401 });
+
     const r = await pool.query(`
       SELECT b.flight_id, p.name AS passenger, p.p_id,
              src.name AS from_city, dst.name AS to_city,
@@ -22,7 +26,11 @@ export async function GET() {
 
 export async function POST(req) {
   try {
-    const { flight_id, passenger_id } = await req.json();
+    const passenger = await getAuthenticatedPassenger();
+    if (!passenger) return NextResponse.json({ error: 'Sign in with Google to book a flight.' }, { status: 401 });
+
+    const { flight_id } = await req.json();
+    const passenger_id = passenger.p_id;
     const check = await pool.query('SELECT * FROM books WHERE flight_id=$1 AND passenger_id=$2', [flight_id, passenger_id]);
     if (check.rows.length) {
       return NextResponse.json({ error: 'You already have a booking on this flight!' }, { status: 409 });
@@ -36,7 +44,11 @@ export async function POST(req) {
 
 export async function DELETE(req) {
   try {
-    const { flight_id, passenger_id } = await req.json();
+    const passenger = await getAuthenticatedPassenger();
+    if (!passenger) return NextResponse.json({ error: 'Sign in with Google to manage bookings.' }, { status: 401 });
+
+    const { flight_id } = await req.json();
+    const passenger_id = passenger.p_id;
     await pool.query('DELETE FROM books WHERE flight_id=$1 AND passenger_id=$2', [flight_id, passenger_id]);
     return NextResponse.json({ success: true });
   } catch (e) {
