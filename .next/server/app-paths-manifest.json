@@ -1,8 +1,3 @@
 {
-  "/api/auth/session/route": "app/api/auth/session/route.js",
-  "/employee/page": "app/employee/page.js",
-  "/page": "app/page.js",
-  "/passenger/page": "app/passenger/page.js",
-  "/api/airports/route": "app/api/airports/route.js",
   "/api/auth/employee/login/route": "app/api/auth/employee/login/route.js"
 }
